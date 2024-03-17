@@ -1,0 +1,24 @@
+{
+  "name": "js-chessboard",
+  "version": "1.0.0",
+  "description": "A chessboard with JavaScript",
+  "module": "./src/chessboard.js",
+  "browser": "./src/chessboard.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Emirhanyld/js-chessboard.git"
+  },
+  "keywords": [
+    "chess",
+    "chessboard",
+    "js",
+    "javascript",
+    "module"
+  ],
+  "author": "Emirhan Yıldırım",
+  "license": "MIT"
+}
