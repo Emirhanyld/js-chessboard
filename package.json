@@ -1,6 +1,6 @@
 {
   "name": "js-chessboard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A chessboard with JavaScript",
   "module": "./src/chessboard.js",
   "browser": "./src/chessboard.js",
@@ -12,6 +12,10 @@
     "type": "git",
     "url": "https://github.com/Emirhanyld/js-chessboard.git"
   },
+  "bugs": {
+    "url": "https://github.com/Emirhanyld/js-chessboard/issues"
+  },
+  "homepage": "https://github.com/Emirhanyld/js-chessboard",
   "keywords": [
     "chess",
     "chessboard",

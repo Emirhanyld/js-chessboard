@@ -158,7 +158,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             let piece = document.createElement("img");
             piece.draggable = false;
             piece.classList.add("piece");
-            piece.src = "alpha/" + pieceName + ".svg";
+            const folderPath = new URL('.', new URL(import.meta.url)).pathname.slice(0, -4);
+            piece.src = `${folderPath}alpha/${pieceName}.svg`;
     
             if (_orientation == "black") {
                 piece.style.translate = (104 - square.charCodeAt(0)) * 100 + "% " + (parseInt(square.charAt(1)) - 1) * 100 + "%";

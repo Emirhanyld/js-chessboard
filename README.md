@@ -5,8 +5,12 @@ js-chessboard is a  simple JavaScript library that allows you to create chessboa
 ### What can it do?
 
 - Move pieces by dragging and dropping with both the mouse and touch
+
 - Set position with FEN
 
+- Right-click to highlight squares
+
+- Right-click and drag to add arrows
 
 ### What cannot it do?
 
