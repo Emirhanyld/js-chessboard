@@ -20,11 +20,11 @@
 }
 
 .last-move.white-square {
-  background-color: #f6eb72;
+  background-color: #f6eb72 !important;
 }
 
 .last-move.black-square {
-  background-color: #dcc34b;
+  background-color: #dcc34b !important;
 }
 
 .highlight.white-square {

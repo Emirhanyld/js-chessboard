@@ -32,6 +32,27 @@ More features will be added from time to time.
 npm install js-chessboard
 ```
 
+### Import
+
+``` javascript
+import { initChesboard } from "./path/to/chessboard.js"
+```
+
+### Import Css
+
+You can import css file with 2 ways.
+
+With HTML
+``` html
+<link rel="stylesheet" href="./path/to/style.css">
+```
+
+Or with javascript
+``` javascript
+import { addCss } from "./path/to/chessboard.js"
+addCss();
+```
+
 ## API
 
 ### initChessboard(element, config = {})
@@ -199,6 +220,15 @@ Destroys board and removes the element from html.
 board.destroy();
 ```
 
+### addCss()
+
+Adds css file to the html document
+
+``` javascript
+import { addCss } from "./path/to/chessboard.js"
+addCss();
+```
+
 ### Position object
 
 You can use a JavaScript object to define a position. Property names must be squares and values must be piece name.
@@ -223,6 +253,126 @@ let position = {
       1 | .  .  .  .  .  .  .  . |
         +------------------------+
           a  b  c  d  e  f  g  h'
+```
+
+## Custom events
+
+### pieceClick
+
+Dispatched when the user clicks on a piece. The event has the piece property, which is the clicked piece as an HTMLElement.
+
+``` javascript
+board.addEventListener("pieceClick", (e) => {
+  console.log(e.piece);
+});
+```
+
+### pieceDragStart
+
+Dispatched when the user starts dragging a piece. The event has piece property, which is the piece being dragged as an HTMLElement.
+
+``` javascript
+board.addEventListener("pieceDragStart", (e) => {
+  console.log(e.piece);
+});
+```
+
+### pieceDrag
+
+Dispatched when the user drags a piece. The event has piece property, which is the piece being dragged as an HTMLElement.
+
+``` javascript
+board.addEventListener("pieceDrag", (e) => {
+  console.log(e.piece);
+});
+```
+
+### pieceDragEnd
+
+Dispatched when the user finishes dragging a piece. The event has piece property, which is the piece being dragged as an HTMLElement.
+
+``` javascript
+board.addEventListener("pieceDragEnd", (e) => {
+  console.log(e.piece);
+});
+```
+
+### pieceMove
+
+Dispatched when a piece is moved. The event has piece property, which is the moved piece as an HTMLElement, from property, which is the old square of the piece as a string, to property, which is the new square of the piece as a string. 
+
+``` javascript
+board.addEventListener("pieceMove", (e) => {
+  console.log(e.piece);
+  console.log(e.from);
+  console.log(e.to);
+});
+```
+
+### positionChange
+
+Dispatched when the position is changes. The event has oldPos property which is the old position as a FEN string and newPos property which is the new position as a FEN string.
+
+``` javascript
+board.addEventListener("positionChange", (e) => {
+  console.log(e.oldPos);
+  console.log(e.newPos);
+});
+```
+
+### overSquare
+
+Dispatched when the user drags a piece over a square. The event has piece property, which is the piece being dragged as an HTMLElement and square property as a string.
+
+``` javascript
+board.addEventListener("overSquare", (e) => {
+  console.log(e.piece);
+  console.log(e.square);
+});
+```
+
+### dropOverSquare
+
+Dispatched when the user drops a piece over a square. The event has piece property, which is the dropped piece as an HTMLElement and square property as a string.
+
+``` javascript
+board.addEventListener("dropOverSquare", (e) => {
+  console.log(e.piece);
+  console.log(e.square);
+});
+```
+
+### promotionAttempt
+
+Dispatched when the user opens the promotion window. The event has piece property, which is the piece that is being promoted as an HTMLElement.
+
+``` javascript
+board.addEventListener("promotionAttempt", (e) => {
+  console.log(e.piece);
+});
+```
+
+### promotion
+
+Dispatched when the user promotes a piece. The event has piece property, which is the promoted piece as an HTMLElement, from property, which is the old square of the piece as a string, to property, which is the new square of the piece as a string, and promoteTo property, which is the new piece as a string.
+
+``` javascript
+board.addEventListener("promotion", (e) => {
+  console.log(e.piece);
+  console.log(e.from);
+  console.log(e.to);
+  console.log(e.promoteTo);
+});
+```
+
+### promotionCancel
+
+Dispatched when the user cancels a promotion. The event has piece property, which is the piece that the user attempted to promote as an HTMLElement.
+
+``` javascript
+board.addEventListener("promotionCancel", (e) => {
+  console.log(e.piece);
+});
 ```
 
 ## License

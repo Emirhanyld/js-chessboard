@@ -1,6 +1,6 @@
 {
   "name": "js-chessboard",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "A chessboard with JavaScript",
   "module": "./src/chessboard.js",
   "browser": "./src/chessboard.js",
