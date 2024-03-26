@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.2.1
+
+### Fixed
+
+- Fixed the bug that occurs when user tries to promote with click
+
 ## 1.2.0
 
 ### Added

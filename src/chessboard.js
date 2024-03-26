@@ -180,8 +180,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             let piece = document.createElement("img");
             piece.draggable = false;
             piece.classList.add("piece");
-            const folderPath = new URL('.', new URL(import.meta.url)).pathname.slice(0, -4);
-            piece.src = `${folderPath}alpha/${pieceName}.svg`;
+            const path = getPath();
+            piece.src = `${path}alpha/${pieceName}.svg`;
 
             if (_orientation == "black") {
                 piece.style.translate = (104 - square.charCodeAt(0)) * 100 + "% " + (parseInt(square.charAt(1)) - 1) * 100 + "%";
@@ -208,7 +208,9 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 if (e.button != 0 || _dragging || !_element.contains(piece)) {
                     return;
                 }
-                
+                if (_moving && _movingPiece && ((_movingPiece.dataset["piece"].charAt(0) == "w" && piece.dataset["square"].charAt(1) == 8) || (_movingPiece.dataset["piece"].charAt(0) == "b" && piece.dataset["square"].charAt(1) == 1))) {
+                    return;
+                }
                 let board = this;
                 let ghostPiece;
 
@@ -219,13 +221,13 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     if (!_dragging) {
                         _dragging = true;
                         _moving = false;
-                        if(_movingPiece) {
+                        if (_movingPiece) {
                             _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
                         }
                         _movingPiece = null;
                         document.removeEventListener("mousedown", mouseDownListener);
                         document.removeEventListener("mousemove", mouseMoveListener);
-                        if(!_element.contains(piece)) {
+                        if (!_element.contains(piece)) {
                             document.removeEventListener("mousemove", moveHandler);
                             return;
                         }
@@ -264,7 +266,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                             beforeOverSquare.classList.remove("hover");
                         }
                         beforeOverSquare = currentOverSquare;
-                        if(_takeSameColor || !currentOverPiece || currentOverPiece.dataset["piece"].toLowerCase().charAt(0) != piece.dataset["piece"].toLowerCase().charAt(0)) {
+                        if (_takeSameColor || !currentOverPiece || currentOverPiece.dataset["piece"].toLowerCase().charAt(0) != piece.dataset["piece"].toLowerCase().charAt(0)) {
                             currentOverSquare.classList.add("hover");
                         }
 
@@ -339,12 +341,12 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     if (!_dragging) {
                         _dragging = true;
                         _moving = false;
-                        if(_movingPiece) {
+                        if (_movingPiece) {
                             _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
                         }
                         _movingPiece = null;
                         document.removeEventListener("mousedown", mouseDownListener);
-                        if(!_element.contains(piece)) {
+                        if (!_element.contains(piece)) {
                             document.removeEventListener("mousemove", moveHandler);
                             return;
                         }
@@ -381,7 +383,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                             beforeOverSquare.classList.remove("hover");
                         }
                         beforeOverSquare = currentOverSquare;
-                        if(_takeSameColor || !currentOverPiece || currentOverPiece.dataset["piece"].toLowerCase().charAt(0) != piece.dataset["piece"].toLowerCase().charAt(0)) {
+                        if (_takeSameColor || !currentOverPiece || currentOverPiece.dataset["piece"].toLowerCase().charAt(0) != piece.dataset["piece"].toLowerCase().charAt(0)) {
                             currentOverSquare.classList.add("hover");
                         }
 
@@ -443,7 +445,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 if (!_moving) {
                     _element.querySelector(`div[data-square=${piece.dataset["square"]}]`).classList.add("last-move");
                     document.addEventListener("mousedown", mouseDownListener);
-                    if(e.pointerType == "mouse") {
+                    if (e.pointerType == "mouse") {
                         document.addEventListener("mousemove", mouseMoveListener);
                     }
                     _moving = true;
@@ -459,7 +461,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
                     _element.querySelector(`div[data-square=${piece.dataset["square"]}]`).classList.remove("last-move");
                     document.removeEventListener("mousedown", mouseDownListener);
-                    if(e.pointerType == "mouse") {
+                    if (e.pointerType == "mouse") {
                         document.removeEventListener("mousemove", mouseMoveListener);
                     }
                     if (_beforeOverSquare) {
@@ -645,11 +647,10 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                         promotionWindow.style.right = ((toSquare.charCodeAt(0) - 97) * 12.5) + "%";
                     }
                 }
-
-                const folderPath = new URL('.', new URL(import.meta.url)).pathname.slice(0, -4);
+                const path = getPath();
                 let queen = document.createElement("img");
                 queen.classList.add("promotion-piece", "no-select");
-                queen.src = folderPath + "alpha/" + (color == "white" ? "wq" : "bq") + ".svg";
+                queen.src = path + "alpha/" + (color == "white" ? "wq" : "bq") + ".svg";
                 queen.onclick = () => {
                     promotionWindow.onblur = () => { };
                     piece.dataset["piece"] = color == "white" ? "wq" : "bq";
@@ -670,7 +671,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
                 let knight = document.createElement("img");
                 knight.classList.add("promotion-piece", "no-select");
-                knight.src = folderPath + "alpha/" + (color == "white" ? "wn" : "bn") + ".svg";
+                knight.src = path + "alpha/" + (color == "white" ? "wn" : "bn") + ".svg";
                 knight.onclick = () => {
                     promotionWindow.onblur = () => { };
                     piece.dataset["piece"] = color == "white" ? "wn" : "bn";
@@ -691,7 +692,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
                 let rook = document.createElement("img");
                 rook.classList.add("promotion-piece", "no-select");
-                rook.src = folderPath + "alpha/" + (color == "white" ? "wr" : "br") + ".svg";
+                rook.src = path + "alpha/" + (color == "white" ? "wr" : "br") + ".svg";
                 rook.onclick = () => {
                     promotionWindow.onblur = () => { };
                     piece.dataset["piece"] = color == "white" ? "wr" : "br";
@@ -712,7 +713,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
                 let bishop = document.createElement("img");
                 bishop.classList.add("promotion-piece", "no-select");
-                bishop.src = folderPath + "alpha/" + (color == "white" ? "wb" : "bb") + ".svg";
+                bishop.src = path + "alpha/" + (color == "white" ? "wb" : "bb") + ".svg";
                 bishop.onclick = () => {
                     promotionWindow.onblur = () => { };
                     piece.dataset["piece"] = color == "white" ? "wb" : "bb";
@@ -876,7 +877,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         _beforeOverSquare = null;
 
         let currentOverSquare = document.elementFromPoint(e.clientX, e.clientY);
-        if(!_element.contains(currentOverSquare)) {
+        if (!_element.contains(currentOverSquare)) {
             document.removeEventListener("mousedown", mouseDownListener);
             document.removeEventListener("mousemove", mouseMoveListener);
             _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
@@ -904,12 +905,12 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         _movingPiece = null;
     }
     function mouseMoveListener(e) {
-        if(!_moving) {
+        if (!_moving) {
             return;
         }
         let currentOverSquare = document.elementFromPoint(e.clientX, e.clientY);
         if (!_element.contains(currentOverSquare)) {
-            if(_beforeOverSquare) {
+            if (_beforeOverSquare) {
                 _beforeOverSquare.classList.remove("hover");
             }
             return;
@@ -1254,14 +1255,22 @@ function isValidPosition(position) {
 }
 
 export function addCss() {
-    const folderPath = new URL('.', new URL(import.meta.url)).pathname.slice(0, -4);
+    const path = getPath();
     const css = document.createElement("link");
     css.rel = "stylesheet";
-    css.href = `${folderPath}css/style.css`;
+    css.href = `${path}css/style.css`;
     document.head.appendChild(css);
 }
 
-window.jschessboard = {
-    initChessboard: initChessboard,
-    addCss: addCss
+function getPath() {
+    const url = new URL('.', new URL(import.meta.url));
+    let path;
+    if (location.origin == url.origin) {
+        path = url.pathname.slice(0, -4);
+    }
+    else {
+        path = url.origin + url.pathname.slice(0, -4);
+    }
+
+    return path;
 }
