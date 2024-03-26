@@ -12,9 +12,9 @@ js-chessboard is a  simple JavaScript library that allows you to create chessboa
 
 - Right-click and drag to add arrows
 
-### What cannot it do?
-
 - Move pieces with click
+
+### What cannot it do?
 
 - Play with legal moves
 
@@ -60,16 +60,36 @@ addCss();
 The initChessboard function converts the given element into a chessboard with the given configuration and returns chessboard as an object.
 
 ``` javascript
-let board = initChessboard();
+let elem = document.querySelector("#div");
+let board = initChessboard(elem, config);
 ```
 
-Default config
+### Config
+
+#### size
+
+Sets the size of the chessboard. Must be a number. The default value is 400.
+
+#### orientation
+
+Sets the orientation of the chessboard. Must be a string. Can be either white or black. The default is white.
+
+#### position
+
+Sets the position of the chessboard. Can be a FEN string, a position object or a predefined position string. Predefined positions are "start" and "empty". The default position is the start position.
+
+#### takeSameColor
+
+Sets if the user can take same color pieces or not. Must be a boolean. Default value is false.
+
+### Default config
 
 ``` javascript
 config = {
-    size = 400,
-    orientation = "white",
-    position = "start"
+    size: 400,
+    orientation: "white",
+    position: "start",
+    takeSameColor: false 
 }
 ```
 
@@ -162,6 +182,15 @@ Returns the piece if there is a piece on the given square, null if there is not,
 ``` javascript
 board.getPiece("g5"); // img.piece
 board.getPiece("h9"); // undefined
+```
+
+### .getSquare(square)
+
+Returns the square as an HTMLElement if there is a square on the given square, null if there is not, undefined if the given square is invalid. Square parameter must be string.
+
+``` javascript
+board.getSquare("g5"); // div.square
+board.getSquare("h9"); // undefined
 ```
 
 ### .movePiece(fromSquare, toSquare, animation = false)

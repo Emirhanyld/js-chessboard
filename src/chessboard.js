@@ -1,4 +1,4 @@
-export function initChessboard(element, { size = 400, orientation = "white", position = "start" } = {}) {
+export function initChessboard(element, { size = 400, orientation = "white", position = "start", takeSameColor = false } = {}) {
     let _element = element;
     let _size = typeof size == "number" ? size : 400;
     let _orientation = isValidOrientation(orientation) ? orientation : "white";
@@ -16,6 +16,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         _position = fenToObject("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
         _fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
     }
+    let _takeSameColor = typeof takeSameColor == "boolean" ? takeSameColor : false;
     let _lastMove = null;
     let _lastMovedPiece = null;
     let _arrowLayer = null;
@@ -23,6 +24,9 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
     let _arrows = [];
     let _from = null;
     let _dragging = false;
+    let _moving = false;
+    let _movingPiece = null;
+    let _beforeOverSquare = null;
 
     class Chessboard extends EventTarget {
         element = getElement;
@@ -194,16 +198,17 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 piece.style = `width: ${shift * 2}px; height: ${shift * 2}px; left: ${x - shift}px; top: ${y - shift}px; position: fixed;`;
             }
 
+            /* Drag and Drop */
             piece.addEventListener("mousedown", (e) => {
                 if (e.button == 2) {
                     e.preventDefault();
                     _element.querySelector(`div[data-square="${piece.dataset["square"]}"]`).dispatchEvent(new MouseEvent('mousedown', { 'bubbles': true, cancelable: true, button: 2 }));
                     return;
                 }
-                if (e.button != 0 || _dragging) {
+                if (e.button != 0 || _dragging || !_element.contains(piece)) {
                     return;
                 }
-
+                
                 let board = this;
                 let ghostPiece;
 
@@ -213,6 +218,17 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 function moveHandler(e) {
                     if (!_dragging) {
                         _dragging = true;
+                        _moving = false;
+                        if(_movingPiece) {
+                            _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
+                        }
+                        _movingPiece = null;
+                        document.removeEventListener("mousedown", mouseDownListener);
+                        document.removeEventListener("mousemove", mouseMoveListener);
+                        if(!_element.contains(piece)) {
+                            document.removeEventListener("mousemove", moveHandler);
+                            return;
+                        }
                         const event = new Event("pieceDragStart");
                         event.piece = piece;
                         board.dispatchEvent(event);
@@ -234,11 +250,13 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
                     e.target.hidden = true;
                     let currentOverSquare = document.elementFromPoint(e.clientX, e.clientY);
+                    let currentOverPiece;
                     e.target.hidden = false;
                     if (!_element.contains(currentOverSquare)) {
                         return;
                     }
                     if (currentOverSquare.classList.contains("piece")) {
+                        currentOverPiece = currentOverSquare;
                         currentOverSquare = _element.querySelector(`div[data-square=${currentOverSquare.dataset["square"]}]`);
                     }
                     if (beforeOverSquare != currentOverSquare) {
@@ -246,7 +264,9 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                             beforeOverSquare.classList.remove("hover");
                         }
                         beforeOverSquare = currentOverSquare;
-                        beforeOverSquare.classList.add("hover");
+                        if(_takeSameColor || !currentOverPiece || currentOverPiece.dataset["piece"].toLowerCase().charAt(0) != piece.dataset["piece"].toLowerCase().charAt(0)) {
+                            currentOverSquare.classList.add("hover");
+                        }
 
                         const event = new Event("overSquare");
                         event.piece = piece;
@@ -280,13 +300,13 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                         ghostPiece.remove();
                         return;
                     }
-    
+
                     if (overElem.classList.contains("piece")) {
                         overElem = _element.querySelector(`div[data-square=${overElem.dataset["square"]}]`);
                     }
                     if (overElem.classList.contains("square")) {
                         overElem.classList.remove("hover");
-                        board.movePiece(e.target.dataset["square"], overElem.dataset["square"], false);
+                        board.movePiece(e.target.dataset["square"], overElem.dataset["square"], false, _takeSameColor);
 
                         const event = new Event("dropOverSquare");
                         event.piece = piece;
@@ -304,8 +324,9 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 });
             });
 
+            /* Drag and Drop */
             piece.addEventListener("touchstart", (e) => {
-                if (_dragging)
+                if (_dragging || _moving || !_element.contains(piece))
                     return;
 
                 let board = this;
@@ -317,6 +338,16 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 function moveHandler(e) {
                     if (!_dragging) {
                         _dragging = true;
+                        _moving = false;
+                        if(_movingPiece) {
+                            _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
+                        }
+                        _movingPiece = null;
+                        document.removeEventListener("mousedown", mouseDownListener);
+                        if(!_element.contains(piece)) {
+                            document.removeEventListener("mousemove", moveHandler);
+                            return;
+                        }
                         const event = new Event("pieceDragStart");
                         event.piece = piece;
                         board.dispatchEvent(event);
@@ -339,8 +370,10 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
                     e.target.hidden = true;
                     let currentOverSquare = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
+                    let currentOverPiece;
                     e.target.hidden = false;
                     if (currentOverSquare.classList.contains("piece")) {
+                        currentOverPiece = currentOverSquare;
                         currentOverSquare = _element.querySelector(`div[data-square=${currentOverSquare.dataset["square"]}]`);
                     }
                     if (beforeOverSquare != currentOverSquare) {
@@ -348,7 +381,9 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                             beforeOverSquare.classList.remove("hover");
                         }
                         beforeOverSquare = currentOverSquare;
-                        beforeOverSquare.classList.add("hover");
+                        if(_takeSameColor || !currentOverPiece || currentOverPiece.dataset["piece"].toLowerCase().charAt(0) != piece.dataset["piece"].toLowerCase().charAt(0)) {
+                            currentOverSquare.classList.add("hover");
+                        }
 
                         const event = new Event("overSquare");
                         event.piece = piece;
@@ -380,7 +415,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     }
                     if (overElem.classList.contains("square")) {
                         overElem.classList.remove("hover");
-                        board.movePiece(e.target.dataset["square"], overElem.dataset["square"], false);
+                        board.movePiece(e.target.dataset["square"], overElem.dataset["square"], false, _takeSameColor);
                         if (!_lastMove || _lastMove.split(" ")[1] != piece.dataset["square"]) {
                             _element.querySelector(`div[data-square="${piece.dataset["square"]}"]`).classList.remove("last-move");
                         }
@@ -400,16 +435,43 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 });
             }, { passive: true });
 
-            piece.addEventListener("click", () => {
+            piece.addEventListener("click", (e) => {
                 if (_dragging) {
                     _dragging = false;
                     return;
                 }
+                if (!_moving) {
+                    _element.querySelector(`div[data-square=${piece.dataset["square"]}]`).classList.add("last-move");
+                    document.addEventListener("mousedown", mouseDownListener);
+                    if(e.pointerType == "mouse") {
+                        document.addEventListener("mousemove", mouseMoveListener);
+                    }
+                    _moving = true;
+                    _movingPiece = piece;
+                }
+                else if (piece != _movingPiece) {
+                    _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
+                    _element.querySelector(`div[data-square=${piece.dataset["square"]}]`).classList.add("last-move");
+                    _moving = true;
+                    _movingPiece = piece;
+                }
+                else {
+
+                    _element.querySelector(`div[data-square=${piece.dataset["square"]}]`).classList.remove("last-move");
+                    document.removeEventListener("mousedown", mouseDownListener);
+                    if(e.pointerType == "mouse") {
+                        document.removeEventListener("mousemove", mouseMoveListener);
+                    }
+                    if (_beforeOverSquare) {
+                        _beforeOverSquare.classList.remove("hover");
+                    }
+                    _beforeOverSquare = null;
+                    _moving = false;
+                    _movingPiece = null;
+                }
                 const event = new Event("pieceClick");
                 event.piece = piece;
                 board.dispatchEvent(event);
-
-                _element.querySelector(`div[data-square=${piece.dataset["square"]}]`).classList.toggle("last-move");
 
                 this.clearHighlights();
                 this.clearArrows();
@@ -438,7 +500,15 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             return piece;
         }
 
-        movePiece(fromSquare, toSquare, animation = false) {
+        getSquare(square) {
+            if (!isValidSquare(square))
+                return;
+            square = square.toLowerCase();
+            let squareElem = _element.querySelector(`div[data-square=${square}]`);
+            return squareElem;
+        }
+
+        movePiece(fromSquare, toSquare, animation = false, takeSameColor = false) {
             let board = this;
             fromSquare = fromSquare.toLowerCase();
             toSquare = toSquare.toLowerCase();
@@ -446,6 +516,11 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             let piece = _element.querySelector(`img[data-square=${fromSquare}]`);
             if (!isValidSquare(fromSquare) || !isValidSquare(toSquare) || !piece) {
                 return;
+            }
+
+            let destPiece = _element.querySelector(`img[data-square=${toSquare}]`);
+            if (destPiece && !takeSameColor && destPiece.dataset["piece"].toLowerCase().charAt(0) == piece.dataset["piece"].toLowerCase().charAt(0)) {
+                return this.movePiece(fromSquare, fromSquare, false, true);
             }
 
             if (_lastMovedPiece) {
@@ -466,7 +541,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 const event = new Event("promotionAttempt");
                 event.piece = piece;
                 board.dispatchEvent(event);
-                
+
                 return;
             }
             if (piece.dataset["piece"] == "bp" && toSquare.charAt(1) == "1") {
@@ -479,13 +554,6 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
                 return;
             }
-            else if (fromSquare != toSquare) {
-                const event = new Event("pieceMove");
-                event.piece = piece;
-                event.from = fromSquare;
-                event.to = toSquare;
-                board.dispatchEvent(event);
-            }
 
             if (_orientation == "white") {
                 piece.style = `translate: ${(toSquare.charCodeAt(0) - 97) * 100}% ${(8 - parseInt(toSquare.charAt(1))) * 100}%`;
@@ -494,8 +562,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 piece.style = `translate: ${(104 - toSquare.charCodeAt(0)) * 100}% ${(parseInt(toSquare.charAt(1)) - 1) * 100}%`;
             }
 
-            if (_element.querySelector(`img[data-square=${toSquare}]`) && fromSquare != toSquare) {
-                _element.querySelector(`img[data-square=${toSquare}]`).remove();
+            if (destPiece && fromSquare != toSquare) {
+                destPiece.remove();
             }
             if (fromSquare != toSquare) {
                 let squares = _element.querySelectorAll("div.last-move");
@@ -507,13 +575,19 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 _lastMove = fromSquare + " " + toSquare;
                 _element.querySelector(`div[data-square=${fromSquare}]`).classList.add("last-move");
                 _element.querySelector(`div[data-square=${toSquare}]`).classList.add("last-move");
+
+                const event = new Event("pieceMove");
+                event.piece = piece;
+                event.from = fromSquare;
+                event.to = toSquare;
+                board.dispatchEvent(event);
             }
 
             piece.dataset["square"] = toSquare;
 
             const event = new Event("positionChange");
             event.oldPos = _fen;
-            
+
             delete _position[fromSquare];
             _position[toSquare] = piece.dataset["piece"];
             _fen = objectToFen(_position);
@@ -533,7 +607,16 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 let promotionWindow = document.createElement("div");
                 promotionWindow.classList.add("promotion-window", _orientation == color ? "top" : "bottom");
                 promotionWindow.tabIndex = 0;
-                promotionWindow.onblur = () => {
+                promotionWindow.onblur = (e) => {
+                    if (_moving) {
+                        _moving = false;
+                        promotionWindow.focus();
+                        return;
+                    }
+                    if (_movingPiece) {
+                        _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
+                        _movingPiece = null;
+                    }
                     board.movePiece(fromSquare, fromSquare);
                     piece.style.display = "";
                     promotionWindow.remove();
@@ -574,6 +657,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     board.movePiece(fromSquare, toSquare);
                     piece.style.display = "";
                     promotionWindow.remove();
+                    _moving = false;
+                    _movingPiece = null;
 
                     const event = new Event("promotion");
                     event.piece = piece;
@@ -593,6 +678,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     board.movePiece(fromSquare, toSquare);
                     piece.style.display = "";
                     promotionWindow.remove();
+                    _moving = false;
+                    _movingPiece = null;
 
                     const event = new Event("promotion");
                     event.piece = piece;
@@ -612,6 +699,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     board.movePiece(fromSquare, toSquare);
                     piece.style.display = "";
                     promotionWindow.remove();
+                    _moving = false;
+                    _movingPiece = null;
 
                     const event = new Event("promotion");
                     event.piece = piece;
@@ -631,6 +720,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     board.movePiece(fromSquare, toSquare);
                     piece.style.display = "";
                     promotionWindow.remove();
+                    _moving = false;
+                    _movingPiece = null;
 
                     const event = new Event("promotion");
                     event.piece = piece;
@@ -647,6 +738,11 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     piece.style.display = "";
                     board.movePiece(fromSquare, fromSquare);
                     promotionWindow.remove();
+                    _moving = false;
+                    if (_movingPiece) {
+                        _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
+                        _movingPiece = null;
+                    }
 
                     const event = new Event("promotionCancel");
                     event.piece = piece;
@@ -768,6 +864,67 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
     }
     function getArrows() {
         return _arrows;
+    }
+
+    function mouseDownListener(e) {
+        if (e.button != 0 || !_moving) {
+            return;
+        }
+        if (_beforeOverSquare) {
+            _beforeOverSquare.classList.remove("hover");
+        }
+        _beforeOverSquare = null;
+
+        let currentOverSquare = document.elementFromPoint(e.clientX, e.clientY);
+        if(!_element.contains(currentOverSquare)) {
+            document.removeEventListener("mousedown", mouseDownListener);
+            document.removeEventListener("mousemove", mouseMoveListener);
+            _element.querySelector(`div[data-square=${_movingPiece.dataset["square"]}]`).classList.remove("last-move");
+            _moving = false;
+            _movingPiece = null;
+            return;
+        }
+        if (currentOverSquare == _movingPiece || (!_takeSameColor && currentOverSquare.classList.contains("piece") && currentOverSquare.dataset["piece"].toLowerCase().charAt(0) == _movingPiece.dataset["piece"].toLowerCase().charAt(0))) {
+            return;
+        }
+        if (currentOverSquare.classList.contains("piece")) {
+            currentOverSquare = _element.querySelector(`div[data-square=${currentOverSquare.dataset["square"]}]`);
+        }
+        let from = _movingPiece.dataset["square"];
+        let to = currentOverSquare.dataset["square"];
+        chessboard.movePiece(from, to, false, _takeSameColor);
+        document.removeEventListener("mousedown", mouseDownListener);
+        document.removeEventListener("mousemove", mouseMoveListener);
+
+        if ((_movingPiece.dataset["piece"].charAt(0) == "w" && to.charAt(1) == 8) || (_movingPiece.dataset["piece"].charAt(0) == "b" && to.charAt(1) == 1)) {
+            return;
+        }
+
+        _moving = false;
+        _movingPiece = null;
+    }
+    function mouseMoveListener(e) {
+        if(!_moving) {
+            return;
+        }
+        let currentOverSquare = document.elementFromPoint(e.clientX, e.clientY);
+        if (!_element.contains(currentOverSquare)) {
+            if(_beforeOverSquare) {
+                _beforeOverSquare.classList.remove("hover");
+            }
+            return;
+        }
+        if ((currentOverSquare.classList.contains("piece") && currentOverSquare != _movingPiece) && (_takeSameColor || currentOverSquare.classList.contains("piece") && currentOverSquare.dataset["piece"].toLowerCase().charAt(0) != _movingPiece.dataset["piece"].toLowerCase().charAt(0))) {
+            currentOverSquare = _element.querySelector(`div[data-square=${currentOverSquare.dataset["square"]}]`);
+        }
+        if (currentOverSquare != _beforeOverSquare) {
+            currentOverSquare.classList.add("hover");
+            if (_beforeOverSquare) {
+                _beforeOverSquare.classList.remove("hover");
+            }
+
+            _beforeOverSquare = currentOverSquare;
+        }
     }
 
     _element.classList.add("no-select");
@@ -1102,4 +1259,9 @@ export function addCss() {
     css.rel = "stylesheet";
     css.href = `${folderPath}css/style.css`;
     document.head.appendChild(css);
+}
+
+window.jschessboard = {
+    initChessboard: initChessboard,
+    addCss: addCss
 }

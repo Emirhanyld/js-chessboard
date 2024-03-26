@@ -1,5 +1,13 @@
 # Change Log
 
+## 1.2.0
+
+### Added
+
+- Move pieces with click
+
+- .getSquare() function
+
 ## 1.1.0
 
 ### Added
