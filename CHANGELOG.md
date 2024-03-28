@@ -1,5 +1,11 @@
 # Change Log
 
+## 1.2.2
+
+### Added
+
+- Added CDN support
+
 ## 1.2.1
 
 ### Fixed

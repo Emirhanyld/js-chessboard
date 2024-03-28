@@ -32,22 +32,34 @@ More features will be added from time to time.
 npm install js-chessboard
 ```
 
-### Import
+### Import JavaScript
+
+#### Via CDN
 
 ``` javascript
-import { initChesboard } from "./path/to/chessboard.js"
+import { initChessboard } from "https://cdn.jsdelivr.net/npm/js-chessboard@1.2.2/src/chessboard.min.js"
+```
+
+#### In Local
+
+``` javascript
+import { initChessboard } from "./path/to/chessboard.js"
 ```
 
 ### Import Css
 
-You can import css file with 2 ways.
+#### Via CDN
 
-With HTML
+``` html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/js-chessboard@1.2.2/css/style.min.css">
+```
+
+#### In Local
 ``` html
 <link rel="stylesheet" href="./path/to/style.css">
 ```
 
-Or with javascript
+#### With JavaScript
 ``` javascript
 import { addCss } from "./path/to/chessboard.js"
 addCss();
@@ -193,9 +205,9 @@ board.getSquare("g5"); // div.square
 board.getSquare("h9"); // undefined
 ```
 
-### .movePiece(fromSquare, toSquare, animation = false)
+### .movePiece(fromSquare, toSquare, animation = false, takeSameColor = false)
 
-Moves a piece from fromSquare to toSquare with choice of animation. Returns undefined if the one of the squares invalid or there is no piece, otherwise returns the moved piece.
+Moves a piece from fromSquare to toSquare. Returns undefined if the one of the squares invalid or there is no piece, otherwise returns the moved piece. If animation is true then the piece will move with animation. If takeSameColor is true then the piece will take same colored piece in the toSquare, if false then the piece won't move if there is a piece with the same color in the toSquare.
 
 ``` javascript
 board.movePiece("e2", "e4"); // img.piece
