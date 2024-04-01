@@ -1,6 +1,48 @@
 # Change Log
 
-## 1.2.2
+## 1.3.0
+
+### Added
+
+- New config options
+
+    - showGhostPiece
+
+    - enableHighlights
+
+    - enableArrows
+
+    - resizable
+
+    - minSize
+
+    - maxSize
+
+- Resize board with arrow on the bottom right
+
+- sizeChange event
+
+- overSquare event now works for click move too
+
+- New functions for chessboard
+
+    - .showGhostPiece()
+
+    - .enableHighlights()
+
+    - .enableArrows()
+
+    - .resizable()
+
+    - .minSize()
+
+    - .maxSize()
+
+### Fixed
+
+- Hover effect is no longer visible while dragging the piece outside of the board.
+
+## 1.2.3
 
 ### Added
 

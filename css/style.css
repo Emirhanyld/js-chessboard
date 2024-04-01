@@ -66,7 +66,6 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
     Helvetica, Arial, sans-serif;
   font-weight: 600;
-
 }
 
 .square-number {
@@ -165,6 +164,28 @@
 }
 .close-btn:hover {
   background-color: #F7DED0;
+}
+
+.resize-corner {
+  --corner-size: 2%;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  cursor: se-resize;
+  
+  width: 0;
+  height: 0;
+  border-bottom: 12px solid rgba(75, 0, 130, .4);
+  border-left: 12px solid transparent;
+}
+
+.resize-corner:hover {
+  border-bottom-color: rgb(75, 0, 130);
+}
+
+body.resize, body.resize * {
+  cursor: se-resize !important;
 }
 
 .no-select {

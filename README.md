@@ -2,6 +2,14 @@
 
 js-chessboard is a  simple JavaScript library that allows you to create chessboards on websites.
 
+### Chess Alpha
+
+This library uses [alpha pieces](https://www.enpassant.dk/chess/fonteng.htm#CALPHA) and it is "free for personal non commercial use".
+
+### Bugs ands suggestions
+
+You can report bugs or make suggestions in [this](https://github.com/Emirhanyld/js-chessboard/issues) site.
+
 ### What can it do?
 
 - Move pieces by dragging and dropping with both the mouse and touch
@@ -13,6 +21,8 @@ js-chessboard is a  simple JavaScript library that allows you to create chessboa
 - Right-click and drag to add arrows
 
 - Move pieces with click
+
+- Resize board with mouse
 
 ### What cannot it do?
 
@@ -37,7 +47,7 @@ npm install js-chessboard
 #### Via CDN
 
 ``` javascript
-import { initChessboard } from "https://cdn.jsdelivr.net/npm/js-chessboard@1.2.2/src/chessboard.min.js"
+import { initChessboard } from "https://cdn.jsdelivr.net/npm/js-chessboard@1.3.0/src/chessboard.min.js"
 ```
 
 #### In Local
@@ -51,7 +61,7 @@ import { initChessboard } from "./path/to/chessboard.js"
 #### Via CDN
 
 ``` html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/js-chessboard@1.2.2/css/style.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/js-chessboard@1.3.0/css/style.min.css">
 ```
 
 #### In Local
@@ -94,6 +104,30 @@ Sets the position of the chessboard. Can be a FEN string, a position object or a
 
 Sets if the user can take same color pieces or not. Must be a boolean. Default value is false.
 
+#### showGhostPiece
+
+Sets if the ghost piece will be visible or not while dragging a piece. Default value is true,
+
+#### enableHighlights
+
+Sets if the user can highlight squares with right clicking. Default value is true.
+
+#### enableArrows
+
+Sets if the user can add arrows with right click drag. Default value is true.
+
+#### resizable
+
+Adds resize arrow to the bottom right corner if true. Default value is false.
+
+#### minSize
+
+Sets the minimum possible value for the board size. Default is null.
+
+#### maxSize
+
+Sets the maximum possible value for the board size. Default is null.
+
 ### Default config
 
 ``` javascript
@@ -101,7 +135,13 @@ config = {
     size: 400,
     orientation: "white",
     position: "start",
-    takeSameColor: false 
+    takeSameColor: false,
+    showGhostPiece: true,
+    enableHighlights: true,
+    enableArrows: true,
+    resizable: false,
+    minSize: null,
+    maxSize: null
 }
 ```
 
@@ -156,6 +196,26 @@ Returns the last moved piece as HTMLElement
 ### .arrows()
 
 Returns arrows as an array of HTMLElements
+
+### .showGhostPiece(showGhostPiece)
+
+Returns the current showGhostPiece value if no parameter is passed or the passed parameter is not boolean. Otherwise it sets the showGhostPiece value and returns the new value.
+
+### .enableHighlights(enableHighlight)
+
+Returns the current enableHighlight value if no parameter is passed or the passed parameter is not boolean. Otherwise it sets the enableHighlight value and returns the new value.
+
+### .enableArrows(enableArrows)
+
+Returns the current enableArrows value if no parameter is passed or the passed parameter is not boolean. Otherwise it sets the enableArrows value and returns the new value.
+
+### .minSize(newMinSize)
+
+Returns the current minSize value if no parameter is passed or the passed parameter is not boolean. Otherwise it sets the minSize value and returns the new value.
+
+### .maxSize(newMaxSize)
+
+Returns the current maxSize value if no parameter is passed or the passed parameter is not boolean. Otherwise it sets the maxSize value and returns the new value.
 
 ### .flipBoard()
 
@@ -228,6 +288,10 @@ Resizes the board. Returns new size or undefined if size is not a number.
 ``` javascript
 board.resize(600); // 600
 ```
+
+### .resizable(resizable)
+
+Returns the current resizable value if no parameter is passed or the passed parameter is not boolean. Otherwise it sets the resizable value and returns the new value.
 
 ### .clearPieces()
 
@@ -413,6 +477,16 @@ Dispatched when the user cancels a promotion. The event has piece property, whic
 ``` javascript
 board.addEventListener("promotionCancel", (e) => {
   console.log(e.piece);
+});
+```
+
+### sizeChange
+
+Dispatched when the size of the board changes. There is a property named newSize in the event.
+
+``` javascript
+board.addEventListener("sizeChange", (e) => {
+  console.log(e.newSize);
 });
 ```
 

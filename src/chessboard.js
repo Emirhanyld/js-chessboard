@@ -1,4 +1,4 @@
-export function initChessboard(element, { size = 400, orientation = "white", position = "start", takeSameColor = false } = {}) {
+export function initChessboard(element, { size = 400, orientation = "white", position = "start", takeSameColor = false, showGhostPiece = true, enableHighlights = true, enableArrows = true, resizable = false, minSize, maxSize } = {}) {
     let _element = element;
     let _size = typeof size == "number" ? size : 400;
     let _orientation = isValidOrientation(orientation) ? orientation : "white";
@@ -17,6 +17,13 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         _fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
     }
     let _takeSameColor = typeof takeSameColor == "boolean" ? takeSameColor : false;
+    let _showGhostPiece = typeof showGhostPiece == "boolean" ? showGhostPiece : true;
+    let _enableHighlights = typeof enableHighlights == "boolean" ? enableHighlights : true;
+    let _enableArrows = typeof enableArrows == "boolean" ? enableArrows : true;
+    let _resizable = typeof resizable == "boolean" ? resizable : false;
+    let _minSize = typeof minSize == "number" ? minSize : null;
+    let _maxSize = typeof maxSize == "number" ? maxSize : null;
+    let _resizeCorner = null;
     let _lastMove = null;
     let _lastMovedPiece = null;
     let _arrowLayer = null;
@@ -37,6 +44,12 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         lastMove = getLastMove;
         lastMovedPiece = getLastMovedPiece;
         arrows = getArrows;
+        enableArrows = setEnableArrows;
+        enableHighlights = setEnableHighlights;
+        showGhostPiece = setGhostPiece;
+        resizable = setResizable;
+        minSize = setMinSize;
+        maxSize = setMaxSize;
 
         flipBoard() {
             if (_orientation == "white") {
@@ -242,6 +255,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                         ghostPiece.src = piece.src;
                         ghostPiece.classList.add("ghost-piece");
                         ghostPiece.style.translate = piece.style.translate;
+                        if (!_showGhostPiece)
+                            ghostPiece.style.display = "none";
                         _pieceLayer.appendChild(ghostPiece);
                     }
                     moveAt(e.clientX, e.clientY);
@@ -255,6 +270,10 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     let currentOverPiece;
                     e.target.hidden = false;
                     if (!_element.contains(currentOverSquare)) {
+                        if (beforeOverSquare) {
+                            beforeOverSquare.classList.remove("hover");
+                            beforeOverSquare = null;
+                        }
                         return;
                     }
                     if (currentOverSquare.classList.contains("piece")) {
@@ -361,6 +380,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                         ghostPiece.src = piece.src;
                         ghostPiece.classList.add("ghost-piece");
                         ghostPiece.style.translate = piece.style.translate;
+                        if (!_showGhostPiece)
+                            ghostPiece.style.display = "none";
                         _pieceLayer.appendChild(ghostPiece);
                     }
 
@@ -374,6 +395,13 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     let currentOverSquare = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY);
                     let currentOverPiece;
                     e.target.hidden = false;
+                    if (!_element.contains(currentOverSquare)) {
+                        if (beforeOverSquare) {
+                            beforeOverSquare.classList.remove("hover");
+                            beforeOverSquare = null;
+                        }
+                        return;
+                    }
                     if (currentOverSquare.classList.contains("piece")) {
                         currentOverPiece = currentOverSquare;
                         currentOverSquare = _element.querySelector(`div[data-square=${currentOverSquare.dataset["square"]}]`);
@@ -412,6 +440,13 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     e.target.hidden = true;
                     let overElem = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
                     e.target.hidden = false;
+                    if (!_element.contains(overElem)) {
+                        piece.style = `translate: ${ghostPiece.style.translate}`;
+                        if (!_lastMove || _lastMove.split(" ")[1] != piece.dataset["square"]) {
+                            _element.querySelector(`div[data-square="${piece.dataset["square"]}"]`).classList.remove("last-move");
+                        }
+                        return;
+                    }
                     if (overElem.classList.contains("piece")) {
                         overElem = _element.querySelector(`div[data-square=${overElem.dataset["square"]}]`);
                     }
@@ -458,7 +493,6 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     _movingPiece = piece;
                 }
                 else {
-
                     _element.querySelector(`div[data-square=${piece.dataset["square"]}]`).classList.remove("last-move");
                     document.removeEventListener("mousedown", mouseDownListener);
                     if (e.pointerType == "mouse") {
@@ -481,7 +515,6 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
             piece.addEventListener("mouseup", (e) => {
                 if (e.button == 2) {
-                    e.preventDefault();
                     _element.querySelector(`div[data-square="${piece.dataset["square"]}"]`).dispatchEvent(new MouseEvent('mouseup', { 'bubbles': true, cancelable: true, button: 2 }));
                 }
             });
@@ -779,7 +812,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         }
 
         addArrow(fromSquare, toSquare) {
-            if (!isValidSquare(fromSquare) || !isValidSquare(toSquare))
+            if (!_enableArrows || !isValidSquare(fromSquare) || !isValidSquare(toSquare))
                 return;
 
             for (let i = 0; i < _arrows.length; i++) {
@@ -827,11 +860,14 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         }
 
         resize(size) {
-            if (typeof size != "number")
+            if (typeof size != "number" || size < 0 || (_minSize && size < _minSize) || (_maxSize && size > _maxSize))
                 return;
 
             _size = size
             _element.style = `width: ${_size}px; height: ${_size}px; position: relative;`;
+            let event = new Event("sizeChange");
+            event.newSize = _size;
+            this.dispatchEvent(event);
             return _size;
         }
 
@@ -865,6 +901,47 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
     }
     function getArrows() {
         return _arrows;
+    }
+    function setEnableArrows(enableArrows) {
+        if (typeof enableArrows == "boolean")
+            _enableArrows = enableArrows;
+        return _enableArrows;
+    }
+    function setEnableHighlights(enableHighlights) {
+        if (typeof enableHighlights == "boolean")
+            _enableHighlights = enableHighlights;
+        return _enableHighlights;
+    }
+    function setGhostPiece(showGhostPiece) {
+        if (typeof showGhostPiece == "boolean")
+            _showGhostPiece = showGhostPiece;
+        return _showGhostPiece;
+    }
+    function setResizable(resizable) {
+        if (typeof resizable == "boolean")
+            _resizable = resizable;
+
+        if (_resizable) {
+            _resizeCorner.style.display = "block";
+        }
+        else {
+            _resizeCorner.style.display = "none";
+        }
+        return _resizable;
+    }
+    function setMinSize(newMinSize) {
+        if (typeof newMinSize == "number")
+            _minSize = newMinSize;
+        if (_size < newMinSize)
+            chessboard.resize(newMinSize);
+        return _minSize;
+    }
+    function setMaxSize(newMaxSize) {
+        if (typeof newMaxSize == "number")
+            _maxSize = newMaxSize;
+        if(_size > newMaxSize)
+            chessboard.resize(newMaxSize);
+        return _maxSize;
     }
 
     function mouseDownListener(e) {
@@ -922,6 +999,12 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             currentOverSquare.classList.add("hover");
             if (_beforeOverSquare) {
                 _beforeOverSquare.classList.remove("hover");
+            }
+            if (currentOverSquare.classList.contains("square")) {
+                let event = new Event("overSquare");
+                event.piece = _movingPiece;
+                event.square = currentOverSquare;
+                chessboard.dispatchEvent(event);
             }
 
             _beforeOverSquare = currentOverSquare;
@@ -984,10 +1067,10 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
             square.addEventListener("mouseup", (e) => {
                 if (e.button == 2) {
-                    if (_from == e.target) {
+                    if (_enableHighlights && _from == e.target) {
                         _from.classList.toggle("highlight");
                     }
-                    else {
+                    else if (_from != e.target) {
                         chessboard.addArrow(_from.dataset["square"], e.target.dataset["square"]);
                     }
                     _from = null;
@@ -1026,6 +1109,31 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
     defs.appendChild(marker);
     _arrowLayer.appendChild(defs);
     _element.appendChild(_arrowLayer);
+
+    /* Resize corner */
+    let resizeCorner = document.createElement("div");
+    resizeCorner.classList.add("resize-corner");
+    resizeCorner.addEventListener("mousedown", () => {
+        if (!_resizable)
+            return;
+
+        document.body.classList.add("resize");
+        function moveHandler(e) {
+            chessboard.resize(_size + e.movementX);
+        }
+
+        document.addEventListener("mousemove", moveHandler);
+        document.addEventListener("mouseup", function listener() {
+            document.body.classList.remove("resize");
+            document.removeEventListener("mousemove", moveHandler);
+            document.removeEventListener("mouseup", listener);
+        })
+    });
+    if (!_resizable) {
+        resizeCorner.style.display = "none";
+    }
+    _element.appendChild(resizeCorner);
+    _resizeCorner = resizeCorner;
 
     chessboard.setOrientation(_orientation);
     chessboard.setPosition(_position);
