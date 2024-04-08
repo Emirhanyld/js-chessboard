@@ -1,5 +1,5 @@
-export function initChessboard(element, { size = 400, orientation = "white", position = "start", takeSameColor = false, showGhostPiece = true, enableHighlights = true, enableArrows = true, resizable = false, minSize, maxSize } = {}) {
-    let _element = element;
+export function initChessboard(element, { size = 400, orientation = "white", position = "start", takeSameColor = false, showGhostPiece = true, enableHighlights = true, enableArrows = true, resizable = false, minSize, maxSize, autoPromoteTo } = {}) {
+    let _element = document.createElement("div");
     let _size = typeof size == "number" ? size : 400;
     let _orientation = isValidOrientation(orientation) ? orientation : "white";
     let _position = null;
@@ -23,7 +23,14 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
     let _resizable = typeof resizable == "boolean" ? resizable : false;
     let _minSize = typeof minSize == "number" ? minSize : null;
     let _maxSize = typeof maxSize == "number" ? maxSize : null;
+    let _autoPromoteTo = false;
+    if(typeof autoPromoteTo == "string" && (autoPromoteTo.toLowerCase() == "q" || autoPromoteTo.toLowerCase() == "r" || autoPromoteTo.toLowerCase() == "b" || autoPromoteTo.toLowerCase() == "n")) {
+        _autoPromoteTo = autoPromoteTo.toLowerCase();
+    }
     let _resizeCorner = null;
+    let _moves = [];
+    let _currentMoveCount = 0;
+    let _totalMoveCount = 0;
     let _lastMove = null;
     let _lastMovedPiece = null;
     let _arrowLayer = null;
@@ -34,6 +41,8 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
     let _moving = false;
     let _movingPiece = null;
     let _beforeOverSquare = null;
+    let _promotedTo = null;
+    let _changingMove = false;
 
     class Chessboard extends EventTarget {
         element = getElement;
@@ -50,6 +59,10 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         resizable = setResizable;
         minSize = setMinSize;
         maxSize = setMaxSize;
+        autoPromoteTo = setAutoPromoteTo;
+        moves = getMoves;
+        currentMoveCount = getCurrentMoveCount;
+        totalMoveCount = getTotalMoveCount;
 
         flipBoard() {
             if (_orientation == "white") {
@@ -96,7 +109,10 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 }
                 _orientation = "black";
             }
+            let temp = [_moves, _currentMoveCount];
             this.setPosition(_position);
+            _moves = temp[0];
+            _currentMoveCount = temp[1];
 
             if (_lastMove) {
                 let lastSquares = _lastMove.split(" ");
@@ -114,17 +130,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             if (typeof position == "string") {
                 if (position == "start") {
                     let startFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR";
-
-                    const event = new Event("positionChange");
-                    event.oldPos = _fen;
-                    event.newPos = startFen;
-                    this.dispatchEvent(event);
-
-                    position = fenToObject(startFen);
-                    _position = position;
-                    _fen = startFen;
-
-                    return _fen;
+                    return this.setPosition(startFen);
                 }
                 else if (position == "empty") {
                     const event = new Event("positionChange");
@@ -157,7 +163,6 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 }
             }
 
-
             this.clearPieces();
             this.clearHighlights();
             this.clearArrows();
@@ -168,15 +173,14 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 });
             }
 
-
-
             for (const square in position) {
                 this.setPiece(position[square], square);
             }
 
             _position = position;
             _fen = objectToFen(position);
-
+            _currentMoveCount = 0;
+            _moves = [];
 
             return _fen;
         }
@@ -327,7 +331,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     }
                     if (overElem.classList.contains("square")) {
                         overElem.classList.remove("hover");
-                        board.movePiece(e.target.dataset["square"], overElem.dataset["square"], false, _takeSameColor);
+                        board.movePiece(e.target.dataset["square"], overElem.dataset["square"], {takeSameColor: _takeSameColor});
 
                         const event = new Event("dropOverSquare");
                         event.piece = piece;
@@ -452,7 +456,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                     }
                     if (overElem.classList.contains("square")) {
                         overElem.classList.remove("hover");
-                        board.movePiece(e.target.dataset["square"], overElem.dataset["square"], false, _takeSameColor);
+                        board.movePiece(e.target.dataset["square"], overElem.dataset["square"], {takeSameColor: _takeSameColor});
                         if (!_lastMove || _lastMove.split(" ")[1] != piece.dataset["square"]) {
                             _element.querySelector(`div[data-square="${piece.dataset["square"]}"]`).classList.remove("last-move");
                         }
@@ -543,7 +547,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             return squareElem;
         }
 
-        movePiece(fromSquare, toSquare, animation = false, takeSameColor = false) {
+        movePiece(fromSquare, toSquare, { animation = false, takeSameColor = false, promoteTo = null } = {}) {
             let board = this;
             fromSquare = fromSquare.toLowerCase();
             toSquare = toSquare.toLowerCase();
@@ -555,7 +559,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
 
             let destPiece = _element.querySelector(`img[data-square=${toSquare}]`);
             if (destPiece && !takeSameColor && destPiece.dataset["piece"].toLowerCase().charAt(0) == piece.dataset["piece"].toLowerCase().charAt(0)) {
-                return this.movePiece(fromSquare, fromSquare, false, true);
+                return this.movePiece(fromSquare, fromSquare, {takeSameColor: true});
             }
 
             if (_lastMovedPiece) {
@@ -570,23 +574,89 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             }
 
             if (piece.dataset["piece"] == "wp" && toSquare.charAt(1) == "8") {
-                openPromotionWindow(fromSquare, toSquare, "white");
-                piece.style.display = "none";
+                if(promoteTo) {
+                    piece.dataset["piece"] = "w" + promoteTo;
+                    piece.src = getPath() + "alpha/w" + promoteTo + ".svg";
+                    _moving = false;
+                    _movingPiece = null;
+                    _promotedTo = "w" + promoteTo;
+                    board.movePiece(fromSquare, toSquare, {animation: animation, takeSameColor: takeSameColor});
+                    _promotedTo =  null;
 
-                const event = new Event("promotionAttempt");
-                event.piece = piece;
-                board.dispatchEvent(event);
+                    const event = new Event("promotion");
+                    event.piece = piece;
+                    event.promoteTo = "w" + promoteTo;
+                    event.from = fromSquare;
+                    event.to = toSquare;
+                    board.dispatchEvent(event);
+                }
+                else if(_autoPromoteTo) {
+                    piece.dataset["piece"] = "w" + _autoPromoteTo;
+                    piece.src = getPath() + "alpha/w" + _autoPromoteTo + ".svg";
+                    _moving = false;
+                    _movingPiece = null;
+                    _promotedTo = "w" + _autoPromoteTo;
+                    board.movePiece(fromSquare, toSquare, {animation: animation, takeSameColor: takeSameColor});
+                    _promotedTo =  null;
 
+                    const event = new Event("promotion");
+                    event.piece = piece;
+                    event.promoteTo = "w" + _autoPromoteTo;
+                    event.from = fromSquare;
+                    event.to = toSquare;
+                    board.dispatchEvent(event);
+                }
+                else {
+                    openPromotionWindow(fromSquare, toSquare, "white");
+                    piece.style.display = "none";
+    
+                    const event = new Event("promotionAttempt");
+                    event.piece = piece;
+                    board.dispatchEvent(event);
+                }
                 return;
             }
-            if (piece.dataset["piece"] == "bp" && toSquare.charAt(1) == "1") {
-                openPromotionWindow(fromSquare, toSquare, "black");
-                piece.style.display = "none";
+            else if (piece.dataset["piece"] == "bp" && toSquare.charAt(1) == "1") {
+                if(promoteTo) {
+                    piece.dataset["piece"] = "b" + promoteTo;
+                    piece.src = getPath() + "alpha/b" + promoteTo + ".svg";
+                    _moving = false;
+                    _movingPiece = null;
+                    _promotedTo = "b" + promoteTo;
+                    board.movePiece(fromSquare, toSquare, {animation: animation, takeSameColor: takeSameColor});
+                    _promotedTo =  null;
 
-                const event = new Event("promotionAttempt");
-                event.piece = piece;
-                board.dispatchEvent(event);
+                    const event = new Event("promotion");
+                    event.piece = piece;
+                    event.promoteTo = "b" + promoteTo;
+                    event.from = fromSquare;
+                    event.to = toSquare;
+                    board.dispatchEvent(event);
+                }
+                else if(autoPromoteTo) {
+                    piece.dataset["piece"] = "b" + _autoPromoteTo;
+                    piece.src = getPath() + "alpha/b" + _autoPromoteTo + ".svg";
+                    _moving = false;
+                    _movingPiece = null;
+                    _promotedTo = "b" + _autoPromoteTo;
+                    board.movePiece(fromSquare, toSquare, {animation: animation, takeSameColor: takeSameColor});
+                    _promotedTo =  null;
 
+                    const event = new Event("promotion");
+                    event.piece = piece;
+                    event.promoteTo = "b" + _autoPromoteTo;
+                    event.from = fromSquare;
+                    event.to = toSquare;
+                    board.dispatchEvent(event);
+                }
+                else {
+                    openPromotionWindow(fromSquare, toSquare, "black");
+                    piece.style.display = "none";
+    
+                    const event = new Event("promotionAttempt");
+                    event.piece = piece;
+                    board.dispatchEvent(event);
+                }
                 return;
             }
 
@@ -597,17 +667,21 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 piece.style = `translate: ${(104 - toSquare.charCodeAt(0)) * 100}% ${(parseInt(toSquare.charAt(1)) - 1) * 100}%`;
             }
 
-            if (destPiece && fromSquare != toSquare) {
-                destPiece.remove();
-            }
             if (fromSquare != toSquare) {
+                if(destPiece)
+                    destPiece.remove();
                 let squares = _element.querySelectorAll("div.last-move");
                 if (squares) {
                     squares.forEach(square => {
                         square.classList.remove("last-move");
                     });
                 }
-                _lastMove = fromSquare + " " + toSquare;
+                _lastMove = fromSquare + " " + toSquare + " " + (destPiece ? destPiece.dataset["piece"] : "-") + " " + (_promotedTo ? _promotedTo : "-");
+                if(!_changingMove) {
+                    _moves = _moves.slice(0, _currentMoveCount++);
+                    _moves.push(_lastMove);
+                    _totalMoveCount = _currentMoveCount;
+                }
                 _element.querySelector(`div[data-square=${fromSquare}]`).classList.add("last-move");
                 _element.querySelector(`div[data-square=${toSquare}]`).classList.add("last-move");
 
@@ -642,7 +716,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 let promotionWindow = document.createElement("div");
                 promotionWindow.classList.add("promotion-window", _orientation == color ? "top" : "bottom");
                 promotionWindow.tabIndex = 0;
-                promotionWindow.onblur = (e) => {
+                promotionWindow.onblur = () => {
                     if (_moving) {
                         _moving = false;
                         promotionWindow.focus();
@@ -686,9 +760,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 queen.src = path + "alpha/" + (color == "white" ? "wq" : "bq") + ".svg";
                 queen.onclick = () => {
                     promotionWindow.onblur = () => { };
-                    piece.dataset["piece"] = color == "white" ? "wq" : "bq";
-                    piece.src = queen.src;
-                    board.movePiece(fromSquare, toSquare);
+                    board.movePiece(fromSquare, toSquare, {promoteTo: "q"});
                     piece.style.display = "";
                     promotionWindow.remove();
                     _moving = false;
@@ -707,9 +779,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 knight.src = path + "alpha/" + (color == "white" ? "wn" : "bn") + ".svg";
                 knight.onclick = () => {
                     promotionWindow.onblur = () => { };
-                    piece.dataset["piece"] = color == "white" ? "wn" : "bn";
-                    piece.src = knight.src;
-                    board.movePiece(fromSquare, toSquare);
+                    board.movePiece(fromSquare, toSquare, {promoteTo: "n"});
                     piece.style.display = "";
                     promotionWindow.remove();
                     _moving = false;
@@ -728,9 +798,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 rook.src = path + "alpha/" + (color == "white" ? "wr" : "br") + ".svg";
                 rook.onclick = () => {
                     promotionWindow.onblur = () => { };
-                    piece.dataset["piece"] = color == "white" ? "wr" : "br";
-                    piece.src = rook.src;
-                    board.movePiece(fromSquare, toSquare);
+                    board.movePiece(fromSquare, toSquare, {promoteTo: "r"});
                     piece.style.display = "";
                     promotionWindow.remove();
                     _moving = false;
@@ -749,9 +817,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
                 bishop.src = path + "alpha/" + (color == "white" ? "wb" : "bb") + ".svg";
                 bishop.onclick = () => {
                     promotionWindow.onblur = () => { };
-                    piece.dataset["piece"] = color == "white" ? "wb" : "bb";
-                    piece.src = bishop.src;
-                    board.movePiece(fromSquare, toSquare);
+                    board.movePiece(fromSquare, toSquare, {promoteTo: "b"});
                     piece.style.display = "";
                     promotionWindow.remove();
                     _moving = false;
@@ -871,12 +937,79 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             return _size;
         }
 
+        previousMove(animation = true) {
+            _changingMove = true;
+            let move = _moves[_currentMoveCount - 1];
+            if(!move) {
+                _changingMove = false;
+                return;
+            }
+
+            move = move.split(" ");
+            this.movePiece(move[1], move[0], {animation: animation, takeSameColor: _takeSameColor});
+            /* Put piece back */
+            if(move[2] != "-") {
+                this.setPiece(move[2], move[1])
+            }
+            /* Take promotion back */
+            if(move[3] != "-") {
+                let piece = this.getPiece(move[0]);
+                let color = piece.dataset["piece"].charAt(0);
+                piece.style.display = "none";
+                piece.dataset["piece"] = color + "p";
+                const path = getPath();
+                piece.src = `${path}alpha/${color}p.svg`;
+                piece.style.display = "";
+            }
+            _currentMoveCount--;
+
+            _element.querySelector(`div[data-square=${move[0]}]`).classList.remove("last-move");
+            _element.querySelector(`div[data-square=${move[1]}]`).classList.remove("last-move");
+            move = _moves[_currentMoveCount - 1];
+            if(move) {
+                move = move.split(" ");
+                _element.querySelector(`div[data-square=${move[0]}]`).classList.add("last-move");
+                _element.querySelector(`div[data-square=${move[1]}]`).classList.add("last-move");
+
+            }
+            _changingMove = false;
+
+            return _currentMoveCount;
+        }
+
+        nextMove(animation = true) {
+            _changingMove = true;
+            let move = _moves[_currentMoveCount];
+            if(!move) {
+                _changingMove = false;
+                return;
+            }
+
+            move = move.split(" ");
+            this.movePiece(move[0], move[1], {animation: animation, takeSameColor: _takeSameColor, promoteTo: move[3] != "-" ? move[3].charAt(1): null});
+            _currentMoveCount++;
+            _changingMove = false;
+
+            return _currentMoveCount;
+        }
+
+        toFirstMove() {
+            while(this.previousMove(false));
+        }
+        
+        toLastMove() {
+            while(this.nextMove(false));
+        }
+
         destroy() {
             _element.remove();
         }
     }
 
     const chessboard = new Chessboard();
+    chessboard.addEventListener("pieceMove", (e) => {
+        // console.log(e);
+    })
 
     function getElement() {
         return _element;
@@ -943,6 +1076,22 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
             chessboard.resize(newMaxSize);
         return _maxSize;
     }
+    function setAutoPromoteTo(autoPromoteTo) {
+        if(autoPromoteTo == false)
+            _autoPromoteTo = false
+        if(typeof autoPromoteTo == "string" && (autoPromoteTo.toLowerCase() == "q" || autoPromoteTo.toLowerCase() == "r" || autoPromoteTo.toLowerCase() == "b" || autoPromoteTo.toLowerCase() == "n"))
+            _autoPromoteTo = autoPromoteTo.toLowerCase();
+        return _autoPromoteTo;
+    }
+    function getMoves() {
+        return _moves;
+    }
+    function getCurrentMoveCount() {
+        return _currentMoveCount;
+    }
+    function getTotalMoveCount() {
+        return _totalMoveCount;
+    }
 
     function mouseDownListener(e) {
         if (e.button != 0 || !_moving) {
@@ -970,11 +1119,11 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
         }
         let from = _movingPiece.dataset["square"];
         let to = currentOverSquare.dataset["square"];
-        chessboard.movePiece(from, to, false, _takeSameColor);
+        chessboard.movePiece(from, to, {takeSameColor: _takeSameColor});
         document.removeEventListener("mousedown", mouseDownListener);
         document.removeEventListener("mousemove", mouseMoveListener);
 
-        if ((_movingPiece.dataset["piece"].charAt(0) == "w" && to.charAt(1) == 8) || (_movingPiece.dataset["piece"].charAt(0) == "b" && to.charAt(1) == 1)) {
+        if (_autoPromoteTo || (_movingPiece.dataset["piece"].charAt(0) == "w" && to.charAt(1) == 8) || (_movingPiece.dataset["piece"].charAt(0) == "b" && to.charAt(1) == 1)) {
             return;
         }
 
@@ -1138,6 +1287,7 @@ export function initChessboard(element, { size = 400, orientation = "white", pos
     chessboard.setOrientation(_orientation);
     chessboard.setPosition(_position);
 
+    element.appendChild(_element);
     return chessboard;
 }
 
@@ -1366,7 +1516,7 @@ export function addCss() {
     const path = getPath();
     const css = document.createElement("link");
     css.rel = "stylesheet";
-    css.href = `${path}css/style.css`;
+    css.href = `${path}css/chessboard.css`;
     document.head.appendChild(css);
 }
 

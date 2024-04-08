@@ -24,6 +24,8 @@ You can report bugs or make suggestions in [this](https://github.com/Emirhanyld/
 
 - Resize board with mouse
 
+- Transition between moves
+
 ### What cannot it do?
 
 - Play with legal moves
@@ -31,8 +33,6 @@ You can report bugs or make suggestions in [this](https://github.com/Emirhanyld/
 - Change themes
 
 - Read PGN
-
-- Moving between moves
 
 More features will be added from time to time.
 
@@ -47,7 +47,7 @@ npm install js-chessboard
 #### Via CDN
 
 ``` javascript
-import { initChessboard } from "https://cdn.jsdelivr.net/npm/js-chessboard@1.3.0/src/chessboard.min.js"
+import { initChessboard } from "https://cdn.jsdelivr.net/npm/js-chessboard@2.0.0/src/chessboard.min.js"
 ```
 
 #### In Local
@@ -61,7 +61,7 @@ import { initChessboard } from "./path/to/chessboard.js"
 #### Via CDN
 
 ``` html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/js-chessboard@1.3.0/css/style.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/js-chessboard@2.0.0/css/chessboard.min.css">
 ```
 
 #### In Local
@@ -79,7 +79,7 @@ addCss();
 
 ### initChessboard(element, config = {})
 
-The initChessboard function converts the given element into a chessboard with the given configuration and returns chessboard as an object.
+The initChessboard function creates a div and creates the chessboard with the given configuration inside that div and then puts this div into the given element and returns chessboard as an object.
 
 ``` javascript
 let elem = document.querySelector("#div");
@@ -128,6 +128,10 @@ Sets the minimum possible value for the board size. Default is null.
 
 Sets the maximum possible value for the board size. Default is null.
 
+#### autoPromoteTo
+
+Auto promotes to that piece instead of showing promotion window if set. Can be "q" (queen), "r" (rook), "n" (knight), "b" (bishop) or false for disable auto promotion. Default is false.
+
 ### Default config
 
 ``` javascript
@@ -141,7 +145,8 @@ config = {
     enableArrows: true,
     resizable: false,
     minSize: null,
-    maxSize: null
+    maxSize: null,
+    autoPromoteTo: false
 }
 ```
 
@@ -183,10 +188,12 @@ board.fen(); // "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
 
 ### .lastMove()
 
-Returns the last played move as a string like
+Returns the last played move as a string. This property's format is "x1 x2 x3 x4". x1 and x2 are from and to squares. x3 is taken piece if a piece is taken. Otherwise it is "-". x4 is the promoted piece if there was a promotion. Otherwise it is "-".
 
 ``` javascript
-board.lastMove(); // "e2 e4"
+board.lastMove(); // "e2 e4 - -" -> e2 to e5 no piece is taken and no promotion
+board.lastMove(); // "d4 e5 bp -" d4 to e5 and black pawn is taken no promotion
+board.lastMove(); // "f7 g8 - wr" f7 to g8 no piece is taken and promoted to white rook
 ```
 
 ### .lastMovedPiece()
@@ -217,9 +224,25 @@ Returns the current minSize value if no parameter is passed or the passed parame
 
 Returns the current maxSize value if no parameter is passed or the passed parameter is not boolean. Otherwise it sets the maxSize value and returns the new value.
 
+### .autoPromoteTo(autoPromoteTo)
+
+Returns the current autoPromoteTo value if no parameter is passed or the passed parameter is not a valid value. Otherwise it sets the autoPromoteTo value and returns the new value.
+
+### .moves()
+
+Returns move history as a string array. Moves format is same as lastMove. Move history and move counts changes if user goes back to another move and then makes a different move. .setPosition() clears move history and move counts.
+
+### .totalMoveCount()
+
+Returns total number of moves.
+
+### .currentMoveCount()
+
+Returns current move count.
+
 ### .flipBoard()
 
-Flips board and returns new orientation
+Flips board and returns new orientation.
 
 ### .setOrientation(orientation)
 
@@ -232,7 +255,7 @@ board.setOrientation("example"); // undefined
 
 ### .setPosition(position)
 
-Sets the position of the board with the given position. The position parameter can be a position object or a fen string. Returns the fen of the new position if the position is valid, otherwise undefined.
+Sets the position of the board with the given position. The position parameter can be a position object or a fen string. Returns the fen of the new position if the position is valid, otherwise undefined. Clears move history and move counts.
 
 ``` javascript
 board.setOrientation("empty"); // "8/8/8/8/8/8/8/8"
@@ -265,9 +288,9 @@ board.getSquare("g5"); // div.square
 board.getSquare("h9"); // undefined
 ```
 
-### .movePiece(fromSquare, toSquare, animation = false, takeSameColor = false)
+### .movePiece(fromSquare, toSquare, {animation = false, takeSameColor = false, promoteTo = null} = {})
 
-Moves a piece from fromSquare to toSquare. Returns undefined if the one of the squares invalid or there is no piece, otherwise returns the moved piece. If animation is true then the piece will move with animation. If takeSameColor is true then the piece will take same colored piece in the toSquare, if false then the piece won't move if there is a piece with the same color in the toSquare.
+Moves a piece from fromSquare to toSquare. Returns undefined if the one of the squares invalid or there is no piece, otherwise returns the moved piece. If animation is true then the last animation will be cut and the piece will move with animation. If takeSameColor is true then the piece will take same colored piece in the toSquare, if false then the piece won't move if there is a piece with the same color in the toSquare. If promoteTo is set to a piece ("q","r","n","b") then it automatically promotes to that piece instead of showing promotion window if there is a promotion.
 
 ``` javascript
 board.movePiece("e2", "e4"); // img.piece
@@ -292,6 +315,22 @@ board.resize(600); // 600
 ### .resizable(resizable)
 
 Returns the current resizable value if no parameter is passed or the passed parameter is not boolean. Otherwise it sets the resizable value and returns the new value.
+
+### .previousMove(animation = true)
+
+Goes back one move and decreases the currentMoveCount by 1. If animation is true it animates the move. Returns currentMoveCount if it can goes back. Otherwise returns undefined.
+
+### .nextMove(animation = true)
+
+Goes forward one move and increases the currentMoveCount by 1. If animation is true it animates the move. Returns currentMoveCount if it can goes forward. Otherwise returns undefined.
+
+### .toFirstMove()
+
+Goes back to first move.
+
+### .toLastMove()
+
+Goes forward to last move.
 
 ### .clearPieces()
 

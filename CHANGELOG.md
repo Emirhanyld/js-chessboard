@@ -1,5 +1,47 @@
 # Change Log
 
+## 2.0.0
+
+### Added
+
+- promoteTo parameter to .movePiece() function
+
+- Auto Promotion
+
+- Move History
+
+    - .moves()
+
+- Move between moves
+
+    - .previousMove()
+
+    - .nextMove()
+
+    - .toFirstMove()
+
+    - .toLastMove()
+
+- Move count
+
+    - totalMoveCount
+
+    - currentMoveCount
+
+### Changed
+
+- Now initChessboard creates the chessboard inside a new div and puts it inside the passed element, instead of creating it directly inside the passed element.
+
+- lastMove format.
+
+- .movePiece() additional parameters are now object properties.
+
+- Css file name is now chessboard.css instead of style.css
+
+### Fixed
+
+- .setposition() function not working when used with "start".
+
 ## 1.3.0
 
 ### Added
